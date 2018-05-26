@@ -8,6 +8,7 @@
 package org.epics.archiverappliance.retrieval.pva;
 
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.List;
@@ -17,7 +18,7 @@ import org.epics.archiverappliance.EventStream;
 import org.epics.archiverappliance.EventStreamDesc;
 import org.epics.archiverappliance.common.TimeUtils;
 import org.epics.archiverappliance.config.ArchDBRTypes;
-import org.epics.archiverappliance.config.PVTypeInfo;
+import org.epics.archiverappliance.data.ByteBufSampleValue;
 import org.epics.archiverappliance.data.DBRTimeEvent;
 import org.epics.archiverappliance.retrieval.RemotableEventStreamDesc;
 import org.epics.archiverappliance.retrieval.mimeresponses.MimeResponse;
@@ -26,6 +27,7 @@ import org.epics.nt.HasTimeStamp;
 import org.epics.nt.NTEnum;
 import org.epics.nt.NTScalar;
 import org.epics.nt.NTScalarArray;
+import org.epics.pvaccess.impl.remote.SerializationHelper;
 import org.epics.pvdata.factory.FieldFactory;
 import org.epics.pvdata.factory.PVDataFactory;
 import org.epics.pvdata.property.Alarm;
@@ -37,6 +39,7 @@ import org.epics.pvdata.property.PVTimeStamp;
 import org.epics.pvdata.property.PVTimeStampFactory;
 import org.epics.pvdata.property.TimeStamp;
 import org.epics.pvdata.property.TimeStampFactory;
+import org.epics.pvdata.pv.DeserializableControl;
 import org.epics.pvdata.pv.Field;
 import org.epics.pvdata.pv.PVByte;
 import org.epics.pvdata.pv.PVByteArray;
@@ -213,8 +216,28 @@ public class PvaMimeResponse implements MimeResponse {
 			val.put(val.getLength(), 1, new PVStructure[] { struct.getPVStructure() }, 0);
 			break;
 		}
-		case DBR_V4_GENERIC_BYTES: {
+		case DBR_V4_GENERIC_BYTES: {			
+			ByteBufSampleValue byteString = (ByteBufSampleValue) evnt.getSampleValue();
+			PVStructure pvStructure = SerializationHelper.deserializeStructureFull(byteString.getValueAsBytes(), new DeserializableControl() {
 
+				@Override
+				public void ensureData(int size) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public void alignData(int alignment) {
+					// TODO Auto-generated method stub
+					
+				}
+
+				@Override
+				public Field cachedDeserialize(ByteBuffer buffer) {
+					// TODO Auto-generated method stub
+					return null;
+				}});
+			val.put(val.getLength(), 1, new PVStructure[] { pvStructure }, 0);
 		}
 		default:
 			throw new UnsupportedOperationException("Unknown DBR type " + streamDBRType);
@@ -262,11 +285,16 @@ public class PvaMimeResponse implements MimeResponse {
 		PVStringArray labels = (PVStringArray) resultStruct.getScalarArrayField("labels", ScalarType.pvString);
 		labels.put(labels.getLength(), 1, new String[] { pv }, 0);
 
-		this.pvValueStruct = createResultPVStructure(remoteDesc.getArchDBRType());
-
 		PVUnionArray value = resultStruct.getUnionArrayField("value");
 		PVUnion val = PVDataFactory.getPVDataCreate()
 				.createPVUnion(FieldFactory.getFieldCreate().createUnion("any", new String[0], new Field[0]));
+		
+		if (remoteDesc.getArchDBRType().equals(ArchDBRTypes.DBR_V4_GENERIC_BYTES)) {
+			this.pvValueStruct = PVDataFactory.getPVDataCreate()
+					.createPVStructureArray(FieldFactory.getFieldCreate().createFieldBuilder().createStructure());
+		} else {
+			this.pvValueStruct = createResultPVStructure(remoteDesc.getArchDBRType()); 
+		}
 		val.set(pvValueStruct);
 		value.put(value.getLength(), 1, new PVUnion[] { val }, 0);
 
