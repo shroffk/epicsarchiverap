@@ -95,7 +95,7 @@ public class RetrievalState {
 			
 			// Add any external servers if any only if the creation time for this type info is after the start time of the request.
 			Timestamp creationTime = typeInfo.getCreationTime();
-			if(includeExternalServers(req)) { 
+			if(req != null && includeExternalServers(req)) { 
 				if(creationTime == null || start.before(creationTime)) { 
 					List<ChannelArchiverDataServerPVInfo> caServers = this.configService.getChannelArchiverDataServers(pvName);
 					if(caServers != null) {
