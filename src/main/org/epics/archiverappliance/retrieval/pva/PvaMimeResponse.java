@@ -183,7 +183,7 @@ public class PvaMimeResponse implements MimeResponse {
 			break;
 		}
 		case DBR_WAVEFORM_INT: {
-			NTScalarArray struct = NTScalarArray.createBuilder().value(ScalarType.pvString).addAlarm().addTimeStamp()
+			NTScalarArray struct = NTScalarArray.createBuilder().value(ScalarType.pvInt).addAlarm().addTimeStamp()
 					.create();
 			List<Integer> values = evnt.getSampleValue().getValues();
 			struct.getValue(PVIntArray.class).put(0, values.size(), Ints.toArray(values), 0);
@@ -202,7 +202,17 @@ public class PvaMimeResponse implements MimeResponse {
 			val.put(val.getLength(), 1, new PVStructure[] { struct.getPVStructure() }, 0);
 			break;
 		}
-		case DBR_WAVEFORM_ENUM:
+		case DBR_WAVEFORM_ENUM:{
+			NTScalarArray struct = NTScalarArray.createBuilder().value(ScalarType.pvInt).addAlarm().addTimeStamp()
+					.create();
+			// TODO may need a check or a transform
+			List<Integer> values = evnt.getSampleValue().getValues();
+			struct.getValue(PVIntArray.class).put(0, values.size(), Ints.toArray(values), 0);
+			addAlarmInfo(struct, evnt);
+			addTimeInfo(struct, evnt);
+			val.put(val.getLength(), 1, new PVStructure[] { struct.getPVStructure() }, 0);
+			break;
+		}
 		case DBR_V4_GENERIC_BYTES: {
 
 		}
@@ -283,9 +293,6 @@ public class PvaMimeResponse implements MimeResponse {
 	 * @return
 	 */
 	private PVStructureArray createResultPVStructure(ArchDBRTypes archDBRType) {
-
-		System.out.println("TYPE:   " + archDBRType.toString());
-
 		switch (archDBRType) {
 		case DBR_SCALAR_FLOAT: {
 			return createScalarStructArray(ScalarType.pvFloat);
@@ -327,9 +334,8 @@ public class PvaMimeResponse implements MimeResponse {
 		case DBR_WAVEFORM_STRING: {
 			return createWaveformStructArray(ScalarType.pvString);
 		}
-		case DBR_WAVEFORM_ENUM:
-		case DBR_V4_GENERIC_BYTES: {
-
+		case DBR_WAVEFORM_ENUM:{
+			return createWaveformStructArray(ScalarType.pvInt);
 		}
 		default:
 			throw new UnsupportedOperationException("Unknown DBR type " + archDBRType);
